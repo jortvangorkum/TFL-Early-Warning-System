@@ -4,8 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+pandas = "*"
+pandoc = "*"
 
 [dev-packages]
+ipykernel = "*"
 
 [requires]
 python_version = "3.8"
