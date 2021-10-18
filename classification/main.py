@@ -1,8 +1,9 @@
-from pytorch_classifier import NetworkClassifier
+from classification.pytorch_classifier import NetworkClassifier
 import torch
 from pathlib import Path
-from tf_network_classifier import TFNetwork
-from naive_bayes_classifier import NaiveBayes
+from classification.tf_network_classifier import TFNetwork
+from classification.naive_bayes_classifier import NaiveBayes
+from classification.decision_tree_classifier import TreeClassifier
 
 
 def run_pytorch():
@@ -35,10 +36,16 @@ def run_naive_bayes():
     nbc.run_model()
 
 
+def run_decision_tree():
+    tree = TreeClassifier()
+    tree.run_model()
+
+
 if __name__ == '__main__':
     """
     Run one of the classifiers.
     """
 #     run_pytorch()
 #     run_tensorflow()
-    run_naive_bayes()
+#    run_naive_bayes()
+    run_decision_tree()

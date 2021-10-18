@@ -4,7 +4,7 @@ import pandas
 from pathlib import Path
 from sklearn.model_selection._split import train_test_split
 import numpy as np
-from network import Network
+from classification.network import Network
 
 
 class NetworkClassifier(object):
