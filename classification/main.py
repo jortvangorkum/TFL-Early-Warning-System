@@ -1,7 +1,7 @@
 from classification.pytorch_classifier import NetworkClassifier
 import torch
 from pathlib import Path
-from classification.tf_network_classifier import TFNetwork
+# from classification.tf_network_classifier import TFNetwork
 from classification.naive_bayes_classifier import NaiveBayes
 from classification.decision_tree_classifier import TreeClassifier
 
@@ -19,12 +19,12 @@ def run_pytorch():
     network.test()
 
 
-def run_tensorflow():
-    """
-    Run the tensorflow model. Doing kind of alright
-    """
-    tf_network = TFNetwork()
-    tf_network.initialize()
+# def run_tensorflow():
+#     """
+#     Run the tensorflow model. Doing kind of alright
+#     """
+#     tf_network = TFNetwork()
+#     tf_network.initialize()
 
 
 def run_naive_bayes():
@@ -39,6 +39,7 @@ def run_naive_bayes():
 def run_decision_tree():
     tree = TreeClassifier()
     tree.run_model()
+    tree.print_scores()
 
 
 if __name__ == '__main__':

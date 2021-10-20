@@ -9,16 +9,22 @@ import itertools
 class Decision(object):
 
     def __init__(self, feature_name: str, feature_id: int, sign: bool,
-                 threshold: float, sample: bool):
+                 threshold: float, sample: bool, value: float = None):
         self.feature_name = feature_name
         self.feature_id = feature_id
         self.seq = sign
         self.threshold = threshold
         self.sample = sample
+        self.value = value
 
     def __str__(self):
-        return "The {} was {} than {} for the {}.".format(self.feature_name, self.seqstr(),
-                                                          self.threshold, self.sampstr())
+        if self.value is not None:
+            return "The {} was {} than {} for the {}, namely {}.".\
+                format(self.feature_name, self.seqstr(), round(self.threshold),
+                       self.sampstr(), round(self.value))
+        else:
+            return "The {} was {} than {} for the {}.".\
+                format(self.feature_name, self.seqstr(), round(self.threshold), self.sampstr())
 
     def aggregate(self, other: Decision) -> Decision:
         """
@@ -26,14 +32,13 @@ class Decision(object):
         Assumes that it's about the same sample/foil and value.
         If combination is not possible, return None.
         """
-        print(other.feature_id, self.feature_id, other.seq, self.seq)
         if other.feature_id == self.feature_id and other.seq == self.seq:
             if self.seq:
                 new_threshold = min(self.threshold, other.threshold)
             else:
                 new_threshold = max(self.threshold, other.threshold)
             return Decision(self.feature_name, self.feature_id, self.seq, new_threshold,
-                            self.sample)
+                            self.sample, self.value)
         else:
             return None
 
@@ -41,19 +46,29 @@ class Decision(object):
         """
         Compare the two decisions. If their rules are contrastive (one > other <) then a string
         is produced explaining the difference. Otherwise returns None.
-        
-        TODO: correct comparisons to see whether values correct. Also, comparisons for other
-        situations
+
+        TODO: comparisons for other situations
         """
+        if not self.sample:
+            print("warning! compare called for foil instead of sample")
+
         if other.feature_id != self.feature_id:
+            print("warning! compare called for other feature")
             return None
         else:
             if self.seq is not other.seq:
-                return "The {} of the {} is {} than {}, while the {}'s is not.".\
-                    format(self.feature_name, other.sampstr(), other.seqstr(), other.threshold,
-                           self.sampstr())
+                if not other.apply(self.value):
+                    return "The {} of the {} should be {} than {}, but it's not; it's {}.".\
+                        format(self.feature_name, self.sampstr(), other.seqstr(),
+                               round(other.threshold), round(self.value))
             else:
                 return None
+
+    def apply(self, value: float) -> bool:
+        """
+        Check whether the value passes the rule of this decision node.
+        """
+        return self.seq is (value <= self.threshold)
 
     def seqstr(self):
         return "smaller" if self.seq else "larger"
@@ -77,7 +92,6 @@ class TreeExplainer(object):
         TODO: make it so that rules of the same feature are aggregated, and compared between the
         foil and the sample.
         """
-        tree = self.model.tree_
         parents, value_leaves = self.inspect_tree()
         sample_class = self.model.predict(sample)[0]
         sample_leaf = self.model.apply(sample)[0]
@@ -114,12 +128,12 @@ class TreeExplainer(object):
             leaf_cut_index = parents[close_leaf].index(close_parent)
             leaf_lowers = [*parents[close_leaf][:leaf_cut_index], close_parent]
 
-            features_sample = self.aggregate_features(sample_lowers, sample_leaf, True)
-            features_foil = self.aggregate_features(leaf_lowers, close_leaf, False)
+            features_sample = self.aggregate_features(sample_lowers, sample_leaf, sample)
+            features_foil = self.aggregate_features(leaf_lowers, close_leaf)
 
-            self.print_comparison(features_sample, features_foil)
+            self.print_comparison(features_sample, features_foil, sample)
 
-    def aggregate_features(self, node_ids: List[int], leaf: int, is_sample: bool) \
+    def aggregate_features(self, node_ids: List[int], leaf: int, sample: DataFrame = None) \
             -> Tuple[Dict[int, List[Decision]], Dict[int, List[Decision]]]:
         """
         Gets a list of node ids and filters them according to the feature on which they split.
@@ -132,8 +146,10 @@ class TreeExplainer(object):
         for i, node_id in reversed(list(enumerate(node_ids))):
             child = node_ids[i-1] if i > 0 else leaf
             seq = child == tree.children_left[node_id]
-            decision = Decision(self.feature_names[tree.feature[node_id]], tree.feature[node_id],
-                                seq, tree.threshold[node_id], is_sample)
+            feature = self.feature_names[tree.feature[node_id]]
+            value = sample.iloc[0][feature] if sample is not None else None
+            decision = Decision(feature, tree.feature[node_id], seq, tree.threshold[node_id],
+                                sample is not None, value)
             features_sample[tree.feature[node_id]].append(decision)
 
         for feature, nodes in features_sample.items():
@@ -154,42 +170,45 @@ class TreeExplainer(object):
         return features_sample
 
     def print_comparison(self, features_sample: Dict[int, List[Decision]],
-                         features_foil: Dict[int, List[Decision]]) -> None:
-        """ 
+                         features_foil: Dict[int, List[Decision]], sample: DataFrame) -> None:
+        """
         Prints the results of the comparison.
         """
         for i, feature in enumerate(self.feature_names):
-            sample_only = list()
-            foil_only = list()
-            sample_nodes = features_sample.get(i, None)
-            foil_nodes = features_foil.get(i, None)
+            sample_only = set()
+            foil_only = set()
+            sample_nodes = features_sample.get(i, [])
+            foil_nodes = features_foil.get(i, [])
+            if foil_nodes is not None:
+                foil_nodes = [x for x in foil_nodes if not x.apply(sample.iloc[0][feature])]
 
-            if sample_nodes is None and foil_nodes is not None:
-                print("Comparison for feature", feature)
-                foil_only.extend(foil_nodes)
-            elif foil_nodes is None and sample_nodes is not None:
-                print("Comparison for feature", feature)
-                sample_only.extend(sample_nodes)
-            elif sample_nodes is None and foil_nodes is None:
+            if not sample_nodes and not foil_nodes:
                 continue
+
+            print("Comparison for feature", feature)
+            if not sample_nodes:
+                foil_only.update(foil_nodes)
+            elif not foil_nodes:
+                sample_only.update(sample_nodes)
             else:
-                print("Comparison for feature", feature)
                 all_combs = itertools.product(sample_nodes, foil_nodes)
                 for s, f in all_combs:
                     comparison = s.compare(f)
                     if comparison is None:
-                        sample_only.extend(sample_nodes)
-                        foil_only.extend(foil_nodes)
-                    print(comparison)
+                        sample_only.add(s)
+                        foil_only.add(f)
+                    else:
+                        print(comparison)
 
             if sample_only:
-                print("Additional rules for sample:")
+                print("Sample individual rules:")
                 for d in sample_only:
                     print(d)
             if foil_only:
-                print("Additional rules for foil:")
+                print("Foil individual rules:")
                 for d in foil_only:
                     print(d)
+            print("")
 
     def inspect_tree(self) -> Tuple[Dict[int, List[int]], Dict[int, List[int]]]:
         """
