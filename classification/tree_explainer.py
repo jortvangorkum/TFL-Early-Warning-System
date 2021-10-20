@@ -7,6 +7,11 @@ import itertools
 
 
 class Decision(object):
+    """
+    Represents a decision node in the tree, optionally with the actual value that was tested
+    in this node.
+    TODO: add a 'between x and y' version when there are two rules who together form a range.
+    """
 
     def __init__(self, feature_name: str, feature_id: int, sign: bool,
                  threshold: float, sample: bool, value: float = None):
@@ -47,7 +52,7 @@ class Decision(object):
         Compare the two decisions. If their rules are contrastive (one > other <) then a string
         is produced explaining the difference. Otherwise returns None.
 
-        TODO: comparisons for other situations
+        TODO: comparisons for other situations, discuss when to compare w group
         """
         if not self.sample:
             print("warning! compare called for foil instead of sample")
@@ -175,8 +180,8 @@ class TreeExplainer(object):
         Prints the results of the comparison.
         """
         for i, feature in enumerate(self.feature_names):
-            sample_only = set()
-            foil_only = set()
+            sample_only = list()
+            foil_only = list()
             sample_nodes = features_sample.get(i, [])
             foil_nodes = features_foil.get(i, [])
             if foil_nodes is not None:
@@ -186,19 +191,18 @@ class TreeExplainer(object):
                 continue
 
             print("Comparison for feature", feature)
-            if not sample_nodes:
-                foil_only.update(foil_nodes)
-            elif not foil_nodes:
-                sample_only.update(sample_nodes)
-            else:
+            sample_only.extend(sample_nodes)
+            foil_only.extend(foil_nodes)
+            if sample_nodes and foil_nodes:
                 all_combs = itertools.product(sample_nodes, foil_nodes)
+                compared = list()
                 for s, f in all_combs:
                     comparison = s.compare(f)
-                    if comparison is None:
-                        sample_only.add(s)
-                        foil_only.add(f)
-                    else:
+                    if comparison is not None:
+                        compared.extend([s, f])
                         print(comparison)
+                sample_only = [x for x in sample_only if x not in compared]
+                foil_only = [x for x in foil_only if x not in compared]
 
             if sample_only:
                 print("Sample individual rules:")
@@ -270,7 +274,7 @@ class TreeExplainer(object):
             if leaf_id[sample_id] == node_id:
                 print("Therefore, the expected result is:", self.target_names[decision[sample_id]])
                 print("The impurity at this leaf, {}, is: {}".format(node_id, impurity[node_id]))
-                print("Distribution at leaf: ", tree.value[node_id])
+                print("Distribution at leaf: ", tree.value[node_id][0])
                 continue
 
             f_name = self.feature_names[feature[node_id]]
