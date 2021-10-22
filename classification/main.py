@@ -3,7 +3,7 @@ from pathlib import Path
 from classification.pytorch_classifier import NetworkClassifier
 # from classification.tf_network_classifier import TFNetwork
 from classification.naive_bayes_classifier import NaiveBayes
-from classification.tree_manager import create_trees, plot_scores
+from classification.tree_manager import TreeManager
 
 
 def run_pytorch():
@@ -37,8 +37,10 @@ def run_naive_bayes():
 
 
 def run_decision_tree():
-    trees = create_trees()
-    plot_scores(trees)
+    tree_manager = TreeManager()
+    tree_manager.create_trees()
+    tree_manager.explain_sample(1, 6, 2)
+    tree_manager.plot_scores()
 
 
 if __name__ == '__main__':

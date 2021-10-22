@@ -24,11 +24,11 @@ class Decision(object):
 
     def __str__(self):
         if self.value is not None:
-            return "The {} was {} than {} for the {}, namely {}.".\
+            return "The {} was {} {} for the {}, namely {}.".\
                 format(self.feature_name, self.seqstr(), round(self.threshold),
                        self.sampstr(), round(self.value))
         else:
-            return "The {} was {} than {} for the {}.".\
+            return "The {} was {} {} for the {}.".\
                 format(self.feature_name, self.seqstr(), round(self.threshold), self.sampstr())
 
     def aggregate(self, other: Decision) -> Decision:
@@ -63,7 +63,7 @@ class Decision(object):
         else:
             if self.seq is not other.seq:
                 if not other.apply(self.value):
-                    return "The {} of the {} should be {} than {}, but it's not; it's {}.".\
+                    return "The {} of the {} should be {} {}, but it's not; it's {}.".\
                         format(self.feature_name, self.sampstr(), other.seqstr(),
                                round(other.threshold), round(self.value))
             else:
@@ -76,13 +76,16 @@ class Decision(object):
         return self.seq is (value <= self.threshold)
 
     def seqstr(self):
-        return "smaller" if self.seq else "larger"
+        return "smaller or equal to" if self.seq else "larger than"
 
     def sampstr(self):
         return "sample" if self.sample else "foil"
 
 
 class TreeExplainer(object):
+    """
+    NOTE: in paper they specifically use the rules of the foil.
+    """
 
     def __init__(self, model: DecisionTreeClassifier, feature_names, target_names):
         self.model = model
@@ -94,7 +97,7 @@ class TreeExplainer(object):
         Report for each class to which the sample wasn't assigned, what the difference is between
         its node and the closest node with a different class.
 
-        TODO: make it so that rules of the same feature are aggregated, and compared between the
+        TODO: make it so that rules of the same feature are compared between the
         foil and the sample.
         """
         parents, value_leaves = self.inspect_tree()
@@ -240,53 +243,30 @@ class TreeExplainer(object):
         recurse(0, 0, None)
 
         parents = {k: v[:-1] for k, v in parents.items() if k in leaves}
-        # This prints all leaves with their parents
-#         for value, leaves in value_leaves.items():
-#             print("leaves with value", self.target_names[value])
-#             for leaf in leaves:
-#                 print(leaf)
-#                 print("parents:", parents[leaf])
 
         return parents, value_leaves
 
-    def get_path(self, sample: DataFrame):
+    def print_path(self, sample: DataFrame):
         """
-        Prints the path to the leaf of the sample.
-        TODO: shorten by using the parent list from inspect_tree.
+        Prints the complete path that led to the classification of the sample.
         """
         tree = self.model.tree_
-        feature = tree.feature
-        threshold = tree.threshold
-        impurity = tree.impurity
+        parents, _ = self.inspect_tree()
+        leaf = self.model.apply(sample)[0]
+        node_ids = parents[leaf]
+        predicted = self.model.predict(sample)[0]
 
-        node_indicator = self.model.decision_path(sample)
-        leaf_id = self.model.apply(sample)
-        decision = self.model.predict(sample)
+        print("Rules that predict sample {}:".format(sample.index[0]))
+        for i, node_id in reversed(list(enumerate(node_ids))):
+            child = node_ids[i-1] if i > 0 else leaf
+            seq = child == tree.children_left[node_id]
+            feature = self.feature_names[tree.feature[node_id]]
+            value = sample.iloc[0][feature] if sample is not None else None
+            decision = Decision(feature, tree.feature[node_id], seq, tree.threshold[node_id],
+                                sample is not None, value)
+            print("Node {}: {}".format(node_id, decision))
 
-        sample_id = 0
-        # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
-        node_index = node_indicator.indices[node_indicator.indptr[sample_id]:
-                                            node_indicator.indptr[sample_id + 1]]
-
-        print('Rules used to predict sample {id}:\n'.format(id=sample.index[sample_id]))
-        for node_id in node_index:
-            # continue to the next node if it is a leaf node
-            if leaf_id[sample_id] == node_id:
-                print("Therefore, the expected result is:", self.target_names[decision[sample_id]])
-                print("The impurity at this leaf, {}, is: {}".format(node_id, impurity[node_id]))
-                print("Distribution at leaf: ", tree.value[node_id][0])
-                continue
-
-            f_name = self.feature_names[feature[node_id]]
-            # check if value of the split feature for sample 0 is below threshold
-            if (sample.iloc[sample_id][f_name] <= threshold[node_id]):
-                threshold_sign = "<="
-            else:
-                threshold_sign = ">"
-
-            print("decision node {node} : {feature} = {value} {inequality} {threshold}".format(
-                      node=node_id,
-                      feature=f_name,
-                      value=sample.iloc[sample_id][f_name],  # iloc[sample_id][f_name]
-                      inequality=threshold_sign,
-                      threshold=threshold[node_id]))
+        print("Therefore, the expected result is:", self.target_names[predicted])
+        print("The impurity at this leaf, {}, is: {}".format(leaf, tree.impurity[leaf]))
+        print("Distribution at leaf: ", {k: v for k, v in
+                                         zip(self.target_names, tree.value[leaf][0])})
