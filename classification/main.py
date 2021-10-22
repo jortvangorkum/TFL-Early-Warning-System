@@ -1,9 +1,9 @@
-from classification.pytorch_classifier import NetworkClassifier
 import torch
 from pathlib import Path
+from classification.pytorch_classifier import NetworkClassifier
 # from classification.tf_network_classifier import TFNetwork
 from classification.naive_bayes_classifier import NaiveBayes
-from classification.decision_tree_classifier import TreeClassifier
+from classification.tree_manager import create_trees, plot_scores
 
 
 def run_pytorch():
@@ -37,9 +37,8 @@ def run_naive_bayes():
 
 
 def run_decision_tree():
-    tree = TreeClassifier()
-    tree.run_model()
-    tree.print_scores()
+    trees = create_trees()
+    plot_scores(trees)
 
 
 if __name__ == '__main__':
