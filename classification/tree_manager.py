@@ -40,7 +40,7 @@ class TreeManager(object):
         """
         tree = self.trees[importance][months]
         explainer = TreeExplainer(tree.model, tree.feature_names, tree.target_names)
-        explainer.print_path(tree.x_test.iloc[[index]])
+        explainer.print_path_and_foil(tree.x_test.iloc[[index]])
 
     def plot_scores(self):
         """
