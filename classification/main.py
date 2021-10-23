@@ -41,9 +41,9 @@ def run_decision_tree():
     Run the decision tree classifier, explain a sample and plot the scores of the different trees.
     """
     tree_manager = TreeManager()
-    tree_manager.create_trees([1])
+    tree_manager.create_trees([1, 2, 3])
     tree_manager.plot_scores()
-    tree_manager.explain_sample(importance=1, months=7, index=2)
+    tree_manager.explain_sample(importance=1, months=6, index=5)
 
 
 if __name__ == '__main__':

@@ -183,10 +183,10 @@ class TreeExplainer(object):
         leaf = self.model.apply(sample)[0]
         node_ids = parents[leaf]
         predicted = self.model.predict(sample)[0]
+        decisions = self._convert_to_decisions(node_ids, leaf, sample)
 
         print("Rules that predict sample {}:".format(sample.index[0]))
-        decisions = self._convert_to_decisions(node_ids, leaf, sample)
-        for node_id, decision in zip(node_ids, reversed(decisions)):
+        for node_id, decision in zip(reversed(node_ids), reversed(decisions)):
             print("Node {}: {}".format(node_id, decision))
 
         print("Therefore, the expected result is:", self.target_names[predicted])
