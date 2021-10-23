@@ -1,5 +1,6 @@
+import os
 import pandas
-from typing import Dict
+from typing import Dict, List
 from pathlib import Path
 from pandas import DataFrame
 from sklearn.model_selection._split import train_test_split
@@ -16,11 +17,11 @@ class TreeManager(object):
     def __init__(self):
         self.trees = None
 
-    def create_trees(self):
+    def create_trees(self, importance_values: List[int]) -> None:
         target_names = ["Fail", "Pass"]
         # target_names = ["Fail", "Withdrawn", "Pass", "dist"]
         trees = defaultdict(list)
-        for importance in [1, 2, 3]:
+        for importance in importance_values:
             for i in range(7):
                 print("making tree", i+1)
                 x_train, x_test, y_train, y_test = self.prep_tree_data(i + 1)
@@ -30,16 +31,27 @@ class TreeManager(object):
 
         self.trees = trees
 
-    def explain_sample(self, importance: float, months: int, index: int):
+    def explain_sample(self, importance: float, months: int, index: int) -> None:
+        """
+        Explain a sample from the test set.
+        :param importance: importance of the Fail class. Used as a multiplier for its class weight
+        :param months: how many months of assessments are taken into account
+        :param index: the index of the sample in the test set
+        """
         tree = self.trees[importance][months]
         explainer = TreeExplainer(tree.model, tree.feature_names, tree.target_names)
-        explainer.print_path(tree.x_train.iloc[[index]])
+        explainer.print_path(tree.x_test.iloc[[index]])
 
     def plot_scores(self):
         """
         Plots the train accuracy, test accuracy, test precision and test recall, and saves them in
         the data folder.
+        Also saves the scores in the data folder in 'scores.csv'
         """
+        results_path = DATA_PATH.joinpath("results")
+        if not results_path.is_dir():
+            os.mkdir(results_path)
+
         scores = DataFrame(columns=["Import", "Months", "Train Accuracy", "Test Accuracy",
                                     "Precision", "Recall"])
 
@@ -62,8 +74,11 @@ class TreeManager(object):
             plt.ylabel(col)
             plt.legend(loc="lower right")
 
-            path = str(DATA_PATH.joinpath(col + ".png"))
+            path = str(results_path.joinpath(col + ".png"))
             plt.savefig(path)
+
+        score_path = str(results_path.joinpath("scores.csv"))
+        scores.to_csv(score_path)
 
     def prep_tree_data(self, number: int):
         """

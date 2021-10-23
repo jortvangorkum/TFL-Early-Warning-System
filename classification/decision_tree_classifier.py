@@ -1,5 +1,4 @@
 from sklearn.tree._classes import DecisionTreeClassifier
-from classification.tree_explainer import TreeExplainer
 from sklearn.metrics._classification import precision_score, recall_score
 from typing import Tuple
 from sklearn.utils.class_weight import compute_class_weight
@@ -32,9 +31,13 @@ class TreeClassifier(object):
                                             class_weight=class_weights)
         self.model.fit(self.x_train, self.y_train)
 
-#         explainer = TreeExplainer(self.model, self.feature_names, self.target_names)
-#         explainer.report_foils(self.x_train.head(1))
-#         explainer.get_path(self.x_train.head(1))
+        # ugh plot won't fit in the figure someone figure it out (hihi)
+#         plt.figure(figsize=(30, 10))
+#         skl_tree.plot_tree(self.model, fontsize=9, feature_names=self.feature_names,
+#                            class_names=self.target_names, filled=True, label="none", precision=1,
+#                            impurity=False)
+#         plt.show()
+#         plt.savefig("tree.png", dpi=100)
 
     def get_scores(self) -> Tuple[float, float, float, float]:
         """
@@ -46,10 +49,5 @@ class TreeClassifier(object):
         y_test_pred = self.model.predict(self.x_test)
         test_precision = precision_score(y_test_pred, self.y_test)
         test_recall = recall_score(y_test_pred, self.y_test)
-
-        print("train accuracy:", train_accuracy)
-        print("test accuracy:", test_accuracy)
-        print("test precision:", test_precision)
-        print("test recall:", test_recall)
 
         return train_accuracy, test_accuracy, test_precision, test_recall
