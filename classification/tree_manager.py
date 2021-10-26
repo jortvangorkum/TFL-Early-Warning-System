@@ -96,6 +96,10 @@ class TreeManager(object):
         df['average_score'] = df[assessments].mean(skipna=True, axis=1)
         for assessment in assessments:  # somehow he doesn't want to fillna in a batch?
             df[assessment].fillna(df['average_score'], inplace=True)
+        clicks = [x for x in df.columns.values if x.split("_")[0] == "vle"]
+        df['vle_click_average'] = df[clicks].mean(skipna=True, axis=1)
+        for click in clicks:  # somehow he doesn't want to fillna in a batch?
+            df[click].fillna(df['vle_click_average'], inplace=True)
         df.dropna()
 
         self.change_oh_cat("gender", df)
