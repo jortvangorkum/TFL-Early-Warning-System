@@ -84,7 +84,8 @@ class Decision(object):
 
     def __eq__(self, other):
         """
-        This is not a real equality, it checks for reverse rules.
+        This is not a real equality, it checks for reverse rules (rules where it checks for < for
+        one, and > for the other)
         """
         if isinstance(other, Decision):
             if self.feature_name == other.feature_name:

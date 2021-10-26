@@ -18,6 +18,10 @@ class TreeManager(object):
         self.trees = None
 
     def create_trees(self, importance_values: List[int]) -> None:
+        """
+        Make the decision trees and train them. The trees are stored in this class, separated by
+        the importance of the fail class.
+        """
         target_names = ["Fail", "Pass"]
         # target_names = ["Fail", "Withdrawn", "Pass", "dist"]
         trees = defaultdict(list)
@@ -90,8 +94,6 @@ class TreeManager(object):
         df = pandas.read_csv(path)
 
         df.drop(df.columns[0], axis=1, inplace=True)
-    #     avg_avg_score = df['average_score'].mean()
-    #     df['average_score'].replace(numpy.nan, avg_avg_score, inplace=True)
         assessments = [x for x in df.columns.values if x.split("_")[0] == "assessment"]
         df['average_score'] = df[assessments].mean(skipna=True, axis=1)
         for assessment in assessments:  # somehow he doesn't want to fillna in a batch?
