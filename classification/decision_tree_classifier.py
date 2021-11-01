@@ -47,7 +47,7 @@ class TreeClassifier(object):
         test_accuracy = self.model.score(self.x_test, self.y_test)
 
         y_test_pred = self.model.predict(self.x_test)
-        test_precision = precision_score(y_test_pred, self.y_test)
-        test_recall = recall_score(y_test_pred, self.y_test)
+        test_precision = precision_score(y_test_pred, self.y_test, pos_label=0)
+        test_recall = recall_score(y_test_pred, self.y_test, pos_label=0)
 
         return train_accuracy, test_accuracy, test_precision, test_recall
