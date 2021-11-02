@@ -43,6 +43,7 @@ def run_decision_tree():
     tree_manager = TreeManager()
     tree_manager.create_trees([1, 2, 3])
     tree_manager.plot_scores()
+    tree_manager.plot_weeks()
     tree_manager.explain_sample(importance=1, months=6, index=5)
 
 
