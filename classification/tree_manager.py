@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 from _collections import defaultdict
 from classification.tree_explainer import TreeExplainer
 
+import seaborn as sns
+sns.set_theme()
+
 DATA_PATH = Path(__file__).parent.parent.joinpath("data")
 
 
@@ -19,11 +22,10 @@ class TreeManager(object):
 
     def create_trees(self, importance_values: List[int]) -> None:
         target_names = ["Fail", "Pass"]
-        # target_names = ["Fail", "Withdrawn", "Pass", "dist"]
         trees = defaultdict(list)
         for importance in importance_values:
             for i in range(7):
-                print("making tree", i+1)
+                print(f'making tree for week {i + 1} with importance {importance}')
                 x_train, x_test, y_train, y_test = self.prep_tree_data(i + 1)
                 tree = TreeClassifier(x_train, x_test, y_train, y_test, target_names, importance)
                 tree.run_model()
@@ -79,6 +81,37 @@ class TreeManager(object):
 
         score_path = str(results_path.joinpath("scores.csv"))
         scores.to_csv(score_path)
+
+
+    def plot_weeks(self):
+
+        def annotate_text(dataframe, column_y):
+            for x,y in zip(dataframe['Month'], dataframe[column_y]):
+                label = "{:.2f}".format(y)
+                plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
+
+        for importance, tree_list in self.trees.items():
+            scores = DataFrame(columns=["Importance", "Month", "Accuracy", "Precision", "Recall"])
+            # loop over trees
+            for i, tree in enumerate(tree_list):
+                train_accuracy, test_accuracy, precision, recall = tree.get_scores()
+                scores.loc[len(scores)] = [importance, i+1, test_accuracy, precision, recall]
+                
+            # plot lines 
+            with sns.color_palette("Set2"):
+                plt.plot('Month', 'Accuracy', data=scores, label='Accuracy')
+                plt.plot('Month', 'Precision', data=scores, label='Precision')
+                plt.plot('Month', 'Recall', data=scores, label='Recall')
+
+            plt.ylabel('Value')
+            plt.xlabel('Month')
+            plt.legend()
+            plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.pdf', dpi=300)
+            plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.svg', dpi=300)
+            plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.png', dpi=300)
+            plt.clf()
+            # print(scores)
+
 
     def prep_tree_data(self, number: int):
         """
