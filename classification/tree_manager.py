@@ -95,6 +95,7 @@ class TreeManager(object):
                 plt.annotate(label, (x,y), textcoords="offset points", xytext=(0,10), ha='center')
 
         for importance, tree_list in self.trees.items():
+            plt.clf()
             scores = DataFrame(columns=["Importance", "Month", "Accuracy", "Precision", "Recall"])
             # loop over trees
             for i, tree in enumerate(tree_list):
@@ -110,8 +111,8 @@ class TreeManager(object):
             plt.ylabel('Value')
             plt.xlabel('Month')
             plt.legend()
-            plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.pdf', dpi=300)
-            plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.svg', dpi=300)
+            # plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.pdf', dpi=300)
+            # plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.svg', dpi=300)
             plt.savefig(f'data/results/result-tree-importance-{importance}-per-month.png', dpi=300)
             plt.clf()
             # print(scores)
