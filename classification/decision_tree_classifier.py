@@ -13,6 +13,7 @@ class TreeClassifier(object):
         self.y_test = y_test
         self.target_names = target_names
         self.fail_import = fail_import
+        self.threshold = 0.6
 
     def run_model(self):
         """
@@ -20,15 +21,8 @@ class TreeClassifier(object):
         """
         self.feature_names = self.x_train.columns.values
 
-        # adjust the class weight of the Fail class to prioritize
-        class_weights = compute_class_weight(class_weight='balanced',
-                                             classes=[i for i in range(len(self.target_names))],
-                                             y=self.y_train)
-        class_weights = {num: value for num, value in enumerate(class_weights)}
-        class_weights[0] = class_weights[0] * self.fail_import
-
         self.model = DecisionTreeClassifier(max_depth=5, min_samples_split=50, random_state=43,
-                                            class_weight=class_weights)
+                                            class_weight='balanced')
         self.model.fit(self.x_train, self.y_train)
 
         # ugh plot won't fit in the figure someone figure it out (hihi)
@@ -47,7 +41,7 @@ class TreeClassifier(object):
         test_accuracy = self.model.score(self.x_test, self.y_test)
 
         y_test_pred = self.model.predict(self.x_test)
-        test_precision = precision_score(y_test_pred, self.y_test, pos_label=0)
-        test_recall = recall_score(y_test_pred, self.y_test, pos_label=0)
+        test_precision = precision_score(y_true=self.y_test, y_pred=y_test_pred, pos_label=0)
+        test_recall = recall_score(y_true=self.y_test, y_pred=y_test_pred, pos_label=0)
 
         return train_accuracy, test_accuracy, test_precision, test_recall
